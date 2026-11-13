@@ -1,0 +1,14 @@
+name: Raaz Uncovered Cloud Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test cloud runner
+        run: |
+          echo "Raaz Uncovered automation is working!"
+          echo "Cloud runner is ready."
+          date -u

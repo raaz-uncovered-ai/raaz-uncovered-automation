@@ -1,0 +1,92 @@
+
+name: Raaz Uncovered Gemini Script Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate mystery script with Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+          import urllib.error
+
+          prompt = """
+          You are the Hindi/Hinglish scriptwriter for Raaz Uncovered,
+          a faceless mystery YouTube channel for Indian viewers.
+
+          Write a 45-60 second YouTube Short about Roopkund Skeleton Lake.
+
+          Requirements:
+          - Start with a strong curiosity hook.
+          - Use natural, easy Hinglish narration.
+          - Separate confirmed facts from theories.
+          - Do not invent facts, dates, quotes or sources.
+          - Mark claims that need independent fact-checking.
+          - End with a thought-provoking question.
+          - Include a title and a short description.
+          - Keep it original, not copied from another creator.
+          """
+
+          api_key = os.environ["GEMINI_API_KEY"]
+          url = (
+              "https://generativelanguage.googleapis.com/v1beta/"
+              "models/gemini-3.8-flash:generateContent"
+          )
+
+          payload = {
+              "contents": [{
+                  "parts": [{"text": prompt}]
+              }]
+          }
+
+          request = urllib.request.Request(
+              url,
+              data=json.dumps(payload).encode("utf-8"),
+              headers={
+                  "Content-Type": "application/json",
+                  "x-goog-api-key": api_key
+              },
+              method="POST"
+          )
+
+          try:
+              with urllib.request.urlopen(request, timeout=120) as response:
+                  data = json.loads(response.read().decode("utf-8"))
+
+              parts = data["candidates"][0]["content"]["parts"]
+              script = "\n".join(
+                  part["text"] for part in parts if "text" in part
+              )
+
+              if not script.strip():
+                  raise RuntimeError("Gemini returned an empty script.")
+
+              with open("script.md", "w", encoding="utf-8") as file:
+                  file.write(script)
+
+              print("SUCCESS: Gemini generated the script.")
+              print(script)
+
+          except urllib.error.HTTPError as error:
+              print("Gemini API error:", error.code)
+              print(error.read().decode("utf-8"))
+              raise
+          PY
+
+      - name: Save generated script
+        uses: actions/upload-artifact@v4
+        with:
+          name: raaz-uncovered-script
+          path: script.md
+          if-no-files-found: error
+          retention-days: 7
+          
